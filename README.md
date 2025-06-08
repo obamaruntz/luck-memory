@@ -1,0 +1,1 @@
+usermode memory class
