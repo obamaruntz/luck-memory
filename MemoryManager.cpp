@@ -67,21 +67,18 @@ bool MemoryManager::attachToProcess(const str& processName) {
 	return true;
 }
 
-void MemoryManager::readRaw(u64 address, void* buffer, u64 size) {
-	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(address), &buffer, size, nullptr);
-}
+str MemoryManager::readString(u64 address) {
+	i32 stringLength = read<u64>(address + 0x10);
+	u64 stringAddress = (stringLength >= 16) ? read<u64>(address) : address;
 
-std::string MemoryManager::readString(u64 address) {
-	int stringAddress = memory->read<i32>(address + 0x18);
-	int stringLength = memory->read<i32>(stringAddress + 0x18);
+	if (stringLength == 0 || stringLength > 255) {
+		return "Unknown";
+	}
 
-	if (stringLength >= 16)
-		stringAddress = memory->read<uintptr_t>(stringAddress);
+	std::vector<i8> buffer(stringLength + 1, 0);
+	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(stringAddress), buffer.data(), buffer.size(), nullptr);
 
-	std::vector<char> buffer(256);
-	readRaw(stringAddress, buffer.data(), buffer.size());
-
-	return std::string(buffer.data());
+	return str(buffer.data(), stringLength);
 }
 
 i32 MemoryManager::getProcessId() {
