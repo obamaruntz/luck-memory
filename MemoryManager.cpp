@@ -79,7 +79,7 @@ std::string MemoryManager::readString(u64 address) {
 		stringAddress = memory->read<uintptr_t>(stringAddress);
 
 	std::vector<char> buffer(256);
-	memory->readRaw(stringAddress, buffer.data(), buffer.size());
+	readRaw(stringAddress, buffer.data(), buffer.size());
 
 	return std::string(buffer.data());
 }
