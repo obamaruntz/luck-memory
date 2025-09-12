@@ -1,8 +1,6 @@
 #pragma once
-#include <windows.h>
-#include <TlHelp32.h>
 
-extern "C" i64
+extern "C" intptr_t
 Luck_ReadVirtualMemory
 (
 	HANDLE ProcessHandle,
@@ -12,7 +10,7 @@ Luck_ReadVirtualMemory
 	PULONG NumberOfBytesRead
 );
 
-extern "C" i64
+extern "C" intptr_t
 Luck_WriteVirtualMemory
 (
 	HANDLE Processhandle,
@@ -25,36 +23,31 @@ Luck_WriteVirtualMemory
 class MemoryManager final {
 private:
 	HANDLE processHandle;
-
-	i32 processId;
-	u64 baseAddress;
 public:
+	uint32_t processId;
+	uint64_t baseAddress;
+
 	MemoryManager() = default;
 	~MemoryManager() = default;
 
-	i32 getProcessId(const str& processName);
-	u64 getModuleAddress(const str& moduleName);
+	uint32_t getProcessId(const std::string& processName);
+	uint64_t getModuleAddress(const std::string& moduleName);
 
-	bool attachToProcess(const str& processName);
+	bool attachToProcess(const std::string& processName);
 
-	void readRaw(u64 address, void* buffer, u64 size);
-	str readString(u64 address);
-
-	template <typename T>
-	T read(u64 address);
+	std::string readString(uint64_t address);
 
 	template <typename T>
-	void write(u64 address, T value);
+	T read(uint64_t address);
 
-	i32 getProcessId();
-	void setProcessId(i32 newProcessId);
+	template <typename T>
+	void write(uint64_t address, T value);
 
-	u64 getBaseAddress();
-	void setBaseAddress(u64 newBaseAddress);
+	HANDLE getProcessHandle();
 };
 
 template <typename T>
-T MemoryManager::read(u64 address) {
+T MemoryManager::read(uint64_t address) {
 	T buffer{};
 
 	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(address), &buffer, sizeof(T), nullptr);
@@ -63,6 +56,6 @@ T MemoryManager::read(u64 address) {
 }
 
 template <typename T>
-void MemoryManager::write(u64 address, T value) {
+void MemoryManager::write(uint64_t address, T value) {
 	Luck_WriteVirtualMemory(processHandle, reinterpret_cast<void*>(address), &value, sizeof(T), nullptr);
 }
