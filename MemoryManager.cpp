@@ -1,12 +1,12 @@
 #include <memory/MemoryManager.h>
 #include <vector>
 
-i32 MemoryManager::getProcessId(const str& processName) {
-	u32 processId = 0;
+uint32_t MemoryManager::getProcessId(const std::string& processName) {
+	uint64_t localProcessId = 0;
 	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
 
 	if (snapshot == INVALID_HANDLE_VALUE) {
-		return processId;
+		return localProcessId;
 	}
 
 	PROCESSENTRY32 processEntry{};
@@ -15,18 +15,19 @@ i32 MemoryManager::getProcessId(const str& processName) {
 	if (Process32First(snapshot, &processEntry)) {
 		do {
 			if (!_stricmp(processName.c_str(), processEntry.szExeFile)) {
-				processId = processEntry.th32ProcessID;
+				localProcessId = processEntry.th32ProcessID;
+				processId = localProcessId;
 				break;
 			}
 		} while (Process32Next(snapshot, &processEntry));
 	}
 
 	CloseHandle(snapshot);
-	return processId;
+	return localProcessId;
 }
 
-u64 MemoryManager::getModuleAddress(const str& moduleName) {
-	u64 moduleAddress = 0;
+uint64_t MemoryManager::getModuleAddress(const std::string& moduleName) {
+	uint64_t moduleAddress = 0;
 
 	if (!processHandle) {
 		return moduleAddress;
@@ -45,7 +46,8 @@ u64 MemoryManager::getModuleAddress(const str& moduleName) {
 	if (Module32First(snapshot, &moduleEntry)) {
 		do {
 			if (!_stricmp(moduleName.c_str(), moduleEntry.szModule)) {
-				moduleAddress = reinterpret_cast<u64>(moduleEntry.modBaseAddr);
+				moduleAddress = reinterpret_cast<uint64_t>(moduleEntry.modBaseAddr);
+				baseAddress = moduleAddress;
 				break;
 			}
 		} while (Module32Next(snapshot, &moduleEntry));
@@ -55,7 +57,7 @@ u64 MemoryManager::getModuleAddress(const str& moduleName) {
 	return moduleAddress;
 }
 
-bool MemoryManager::attachToProcess(const str& processName) {
+bool MemoryManager::attachToProcess(const std::string& processName) {
 	HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, false, getProcessId(processName));
 
 	if (process == INVALID_HANDLE_VALUE) {
@@ -67,32 +69,20 @@ bool MemoryManager::attachToProcess(const str& processName) {
 	return true;
 }
 
-str MemoryManager::readString(u64 address) {
-	i32 stringLength = read<u64>(address + 0x10);
-	u64 stringAddress = (stringLength >= 16) ? read<u64>(address) : address;
+std::string MemoryManager::readString(uint64_t address) {
+	int32_t stringLength = read<uint64_t>(address + 0x10);
+	uint64_t stringAddress = (stringLength >= 16) ? read<uint64_t>(address) : address;
 
 	if (stringLength == 0 || stringLength > 255) {
 		return "Unknown";
 	}
 
-	std::vector<i8> buffer(stringLength + 1, 0);
+	std::vector<char> buffer(stringLength + 1, 0);
 	Luck_ReadVirtualMemory(processHandle, reinterpret_cast<void*>(stringAddress), buffer.data(), buffer.size(), nullptr);
 
-	return str(buffer.data(), stringLength);
+	return std::string(buffer.data(), stringLength);
 }
 
-i32 MemoryManager::getProcessId() {
-	return processId;
-}
-
-void MemoryManager::setProcessId(i32 newProcessId) {
-	processId = newProcessId;
-}
-
-u64 MemoryManager::getBaseAddress() {
-	return baseAddress;
-}
-
-void MemoryManager::setBaseAddress(u64 newBaseAddress) {
-	baseAddress = newBaseAddress;
+HANDLE MemoryManager::getProcessHandle() {
+	return processHandle;
 }
